@@ -15,7 +15,7 @@ router.get('/', (req, res, next) => {
     .catch(next);
 });
 
-/* ========== POST/CREATE A USER ========== */
+/* ========== POST/CREATE A USER ========= */
 router.post('/register', (req, res, next) => {
 
   const requiredFields = ['username', 'password'];
