@@ -8,7 +8,7 @@ const morgan = require('morgan');
 const passport = require('passport');
 
 const { PORT, CLIENT_ORIGIN } = require('./config');
-const { dbConnect } = require('./db-mongoose');
+const { dbConnect, dbGet } = require('./db-mongoose');
 
 const localStrategy = require('./passport/local');
 const jwtStrategy = require('./passport/jwt');
@@ -63,5 +63,7 @@ if (require.main === module) {
   dbConnect();
   runServer();
 }
+
+console.log(`DB URI: ${dbGet().connection.host}:${dbGet().connection.port}`);
 
 module.exports = { app };
