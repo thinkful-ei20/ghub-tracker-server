@@ -9,109 +9,109 @@ const User = require('../models/user');
 const router = express.Router();
 
 router.get('/', (req, res, next) => {
-  User.find({})
-    .sort('name')
-    .then(results => {
-      res.json(results);
-    })
-    .catch(next);
+	User.find({})
+		.sort('name')
+		.then(results => {
+			res.json(results);
+		})
+		.catch(next);
 });
 
 /* ========== POST/CREATE A USER ========= */
 router.post('/register', (req, res, next) => {
 
-  const requiredFields = ['username', 'password'];
-  const missingField = requiredFields.find(field => !(field in req.body));
+	const requiredFields = ['username', 'password'];
+	const missingField = requiredFields.find(field => !(field in req.body));
 
-  if (missingField) {
-    const err = new Error(`Missing '${missingField}' in request body`);
-    err.status = 422;
-    return next(err);
-  }
+	if (missingField) {
+		const err = new Error(`Missing '${missingField}' in request body`);
+		err.status = 422;
+		return next(err);
+	}
 
-  const stringFields = ['username', 'password', 'firstname', 'lastname'];
-  const nonStringField = stringFields.find(
-    field => field in req.body && typeof req.body[field] !== 'string'
-  );
+	const stringFields = ['username', 'password', 'firstname', 'lastname'];
+	const nonStringField = stringFields.find(
+		field => field in req.body && typeof req.body[field] !== 'string'
+	);
 
-  if (nonStringField) {
-    const err = new Error(`Field: '${nonStringField}' must be type String`);
-    err.status = 422;
-    return next(err);
-  }
+	if (nonStringField) {
+		const err = new Error(`Field: '${nonStringField}' must be type String`);
+		err.status = 422;
+		return next(err);
+	}
 
-  // If the username and password aren't trimmed we give an error.  Users might
-  // expect that these will work without trimming (i.e. they want the password
-  // "foobar ", including the space at the end).  We need to reject such values
-  // explicitly so the users know what's happening, rather than silently
-  // trimming them and expecting the user to understand.
-  // We'll silently trim the other fields, because they aren't credentials used
-  // to log in, so it's less of a problem.
-  const explicityTrimmedFields = ['username', 'password'];
-  const nonTrimmedField = explicityTrimmedFields.find(
-    field => req.body[field].trim() !== req.body[field]
-  );
+	// If the username and password aren't trimmed we give an error.  Users might
+	// expect that these will work without trimming (i.e. they want the password
+	// "foobar ", including the space at the end).  We need to reject such values
+	// explicitly so the users know what's happening, rather than silently
+	// trimming them and expecting the user to understand.
+	// We'll silently trim the other fields, because they aren't credentials used
+	// to log in, so it's less of a problem.
+	const explicityTrimmedFields = ['username', 'password'];
+	const nonTrimmedField = explicityTrimmedFields.find(
+		field => req.body[field].trim() !== req.body[field]
+	);
 
-  if (nonTrimmedField) {
-    const err = new Error(`Field: '${nonTrimmedField}' cannot start or end with whitespace`);
-    err.status = 422;
-    return next(err);
-  }
+	if (nonTrimmedField) {
+		const err = new Error(`Field: '${nonTrimmedField}' cannot start or end with whitespace`);
+		err.status = 422;
+		return next(err);
+	}
 
-  // bcrypt truncates after 72 characters, so let's not give the illusion
-  // of security by storing extra **unused** info
-  const sizedFields = {
-    username: { min: 1 },
-    password: { min: 8, max: 72 }
-  };
+	// bcrypt truncates after 72 characters, so let's not give the illusion
+	// of security by storing extra **unused** info
+	const sizedFields = {
+		username: { min: 1 },
+		password: { min: 8, max: 72 }
+	};
 
-  const tooSmallField = Object.keys(sizedFields).find(
-    field => 'min' in sizedFields[field] &&
-      req.body[field].trim().length < sizedFields[field].min
-  );
-  if (tooSmallField) {
-    const min = sizedFields[tooSmallField].min;
-    const err = new Error(`Field: '${tooSmallField}' must be at least ${min} characters long`);
-    err.status = 422;
-    return next(err);
-  }
+	const tooSmallField = Object.keys(sizedFields).find(
+		field => 'min' in sizedFields[field] &&
+		req.body[field].trim().length < sizedFields[field].min
+	);
+	if (tooSmallField) {
+		const min = sizedFields[tooSmallField].min;
+		const err = new Error(`Field: '${tooSmallField}' must be at least ${min} characters long`);
+		err.status = 422;
+		return next(err);
+	}
 
-  const tooLargeField = Object.keys(sizedFields).find(
-    field => 'max' in sizedFields[field] &&
-      req.body[field].trim().length > sizedFields[field].max
-  );
+	const tooLargeField = Object.keys(sizedFields).find(
+		field => 'max' in sizedFields[field] &&
+		req.body[field].trim().length > sizedFields[field].max
+	);
 
-  if (tooLargeField) {
-    const max = sizedFields[tooLargeField].max;
-    const err = new Error(`Field: '${tooLargeField}' must be at most ${max} characters long`);
-    err.status = 422;
-    return next(err);
-  }
+	if (tooLargeField) {
+		const max = sizedFields[tooLargeField].max;
+		const err = new Error(`Field: '${tooLargeField}' must be at most ${max} characters long`);
+		err.status = 422;
+		return next(err);
+	}
 
-  // Username and password were validated as pre-trimmed
-  let { username, password, firstname = '', lastname = '' } = req.body;
-  let fullname = `${firstname.trim()} ${lastname.trim()}`;
+	// Username and password were validated as pre-trimmed
+	let { username, password, firstname = '', lastname = '' } = req.body;
+	let fullname = `${firstname.trim()} ${lastname.trim()}`;
 
-  // Remove explicit hashPassword if using pre-save middleware
-  User.hashPassword(password)
-    .then(digest => {
-      const newUser = {
-        username,
-        password: digest,
-        fullname
-      };
-      return User.create(newUser);
-    })
-    .then(result => {
-      return res.status(201).location(`/api/users/${result.id}`).json(result);
-    })
-    .catch(err => {
-      if (err.code === 11000) {
-        err = new Error('The username already exists');
-        err.status = 400;
-      }
-      next(err);
-    });
+	// Remove explicit hashPassword if using pre-save middleware
+	User.hashPassword(password)
+		.then(digest => {
+			const newUser = {
+				username,
+				password: digest,
+				fullname
+			};
+			return User.create(newUser);
+		})
+		.then(result => {
+			return res.status(201).location(`/api/users/${result.id}`).json(result);
+		})
+		.catch(err => {
+			if (err.code === 11000) {
+				err = new Error('The username already exists');
+				err.status = 400;
+			}
+			next(err);
+		});
 });
 
 
@@ -120,35 +120,36 @@ router.post('/register', (req, res, next) => {
 router.use('/', passport.authenticate('jwt', { session: false, failWithError: true }));
 
 router.get('/profile', (req, res, next) => {
-  const owner = req.user.username;
-  const repo = 'bookmarks-app'
+	// const owner = req.user.username;
+	const owner = 'jeffreymahmoudi';
+	const repo = 'bookmarks-app'
 
-  // octokit.repos.getCommits({ owner, repo, sha, path, author, since, until, per_page, page }).then(result => {
-  octokit.repos.getCommits({ owner, repo, }).then(result => {
-    // console.log('COMMIT: ', result.data[0]);
-    // console.log('COMMIT INFO: ', result.data[0].commit.message)
-    let results = [];
-    for (let i = 0; i < result.data.length; i++) {
-      console.log('COMMIT INFO: ', result.data[i].commit.message)
-      results.push(result.data[i].commit.message);
-    }
+	// octokit.repos.getCommits({ owner, repo, sha, path, author, since, until, per_page, page }).then(result => {
+	octokit.repos.getCommits({ owner, repo, }).then(result => {
+		// console.log('COMMIT: ', result.data[0]);
+		// console.log('COMMIT INFO: ', result.data[0].commit.message)
+		let results = [];
+		for (let i = 0; i < result.data.length; i++) {
+			console.log('COMMIT INFO: ', result.data[i].commit.message)
+			results.push(result.data[i].commit.message);
+		}
 
-    res.json(results);
-    // res.json(`profile route for ${owner} for ${repo}`);
-  })
+		res.json(results);
+		// res.json(`profile route for ${owner} for ${repo}`);
+	})
 
-  // octokit.repos.get({ owner, repo }).then(result => {
-  //   console.log(result);
-  //   res.json(`profile route for ${owner} for ${repo}`);
-  // })
+	// octokit.repos.get({ owner, repo }).then(result => {
+	//   console.log(result);
+	//   res.json(`profile route for ${owner} for ${repo}`);
+	// })
 
-  // octokit.repos.getForOrg({
-  //   org: 'octokit',
-  //   type: 'public'
-  // }).then(({ data, headers, status }) => {
-  //   console.log(data);
-  //   res.json(`profile route for ${username}`);
-  // })
+	// octokit.repos.getForOrg({
+	//   org: 'octokit',
+	//   type: 'public'
+	// }).then(({ data, headers, status }) => {
+	//   console.log(data);
+	//   res.json(`profile route for ${username}`);
+	// })
 })
 
 module.exports = router;
