@@ -1,6 +1,8 @@
 'use strict';
 
 const express = require('express');
+const passport = require('passport');
+const octokit = require('@octokit/rest')()
 
 const User = require('../models/user');
 
@@ -111,5 +113,23 @@ router.post('/register', (req, res, next) => {
       next(err);
     });
 });
+
+
+/* ==================================================================================== */
+// PROTECTION FOR THE FOLLOWING ENDPOINTS
+router.use('/', passport.authenticate('jwt', { session: false, failWithError: true }));
+
+router.get('/profile', (req, res, next) => {
+  const username = req.user.username;
+
+
+  octokit.repos.getForOrg({
+    org: 'octokit',
+    type: 'public'
+  }).then(({ data, headers, status }) => {
+    console.log(data);
+    res.json(`profile route for ${username}`);
+  })
+})
 
 module.exports = router;
