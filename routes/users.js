@@ -120,16 +120,35 @@ router.post('/register', (req, res, next) => {
 router.use('/', passport.authenticate('jwt', { session: false, failWithError: true }));
 
 router.get('/profile', (req, res, next) => {
-  const username = req.user.username;
+  const owner = req.user.username;
+  const repo = 'bookmarks-app'
 
+  // octokit.repos.getCommits({ owner, repo, sha, path, author, since, until, per_page, page }).then(result => {
+  octokit.repos.getCommits({ owner, repo, }).then(result => {
+    // console.log('COMMIT: ', result.data[0]);
+    // console.log('COMMIT INFO: ', result.data[0].commit.message)
+    let results = [];
+    for (let i = 0; i < result.data.length; i++) {
+      console.log('COMMIT INFO: ', result.data[i].commit.message)
+      results.push(result.data[i].commit.message);
+    }
 
-  octokit.repos.getForOrg({
-    org: 'octokit',
-    type: 'public'
-  }).then(({ data, headers, status }) => {
-    console.log(data);
-    res.json(`profile route for ${username}`);
+    res.json(results);
+    // res.json(`profile route for ${owner} for ${repo}`);
   })
+
+  // octokit.repos.get({ owner, repo }).then(result => {
+  //   console.log(result);
+  //   res.json(`profile route for ${owner} for ${repo}`);
+  // })
+
+  // octokit.repos.getForOrg({
+  //   org: 'octokit',
+  //   type: 'public'
+  // }).then(({ data, headers, status }) => {
+  //   console.log(data);
+  //   res.json(`profile route for ${username}`);
+  // })
 })
 
 module.exports = router;
