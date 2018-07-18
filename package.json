@@ -15,6 +15,7 @@
   "author": "Jeffrey Mahmoudi <jeffreymahmoudi@gmail.com>",
   "license": "MIT",
   "dependencies": {
+    "@octokit/rest": "^15.9.4",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.4",
     "dotenv": "^6.0.0",
