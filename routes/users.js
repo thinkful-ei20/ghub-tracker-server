@@ -163,4 +163,13 @@ router.post('/addFriend', (req, res, next) => {
   });
 })
 
+router.post('/acceptFriend', (req, res, next) => {
+  const userId = req.user.id;
+  const friendId = req.body.friendId;
+
+  User.requestFriend(userId, friendId, (results) => {
+    !(results instanceof Error) ? res.json('friend request accepted') : next(results);
+  });
+})
+
 module.exports = router;
