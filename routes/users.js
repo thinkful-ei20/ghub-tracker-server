@@ -2,7 +2,9 @@
 
 const express = require('express');
 const passport = require('passport');
-const octokit = require('@octokit/rest')()
+const _ = require('lodash');
+
+const gitWrap = require('../utility/git-wrap');
 
 const User = require('../models/user');
 
@@ -122,35 +124,27 @@ router.post('/register', (req, res, next) => {
 router.use('/', passport.authenticate('jwt', { session: false, failWithError: true }));
 
 router.get('/profile', (req, res, next) => {
-  // const owner = req.user.username;
-  const owner = 'jeffreymahmoudi';
-  const repo = 'bookmarks-app'
+  const username = req.user.username;
 
-  // octokit.repos.getCommits({ owner, repo, sha, path, author, since, until, per_page, page }).then(result => {
-  octokit.repos.getCommits({ owner, repo, }).then(result => {
-    // console.log('COMMIT: ', result.data[0]);
-    // console.log('COMMIT INFO: ', result.data[0].commit.message)
-    let results = [];
-    for (let i = 0; i < result.data.length; i++) {
-      console.log('COMMIT INFO: ', result.data[i].commit.message)
-      results.push(result.data[i].commit.message);
-    }
+  let profile = {
+    repos: []
+  };
+  // get list of repos for username
+  gitWrap.getUserRepos(username)
+    .then(results => {
+      _.each(results.data, function (repo) {
+        profile.repos.push({ name: repo.name });
+      });
 
-    res.json(results);
-    // res.json(`profile route for ${owner} for ${repo}`);
-  })
+      // return Promise.all(profile.repos.map(repo => {
+      //   gitWrap.getUserRepoCommits(username, repo.name);
+      // }));
 
-  // octokit.repos.get({ owner, repo }).then(result => {
-  //   console.log(result);
-  //   res.json(`profile route for ${owner} for ${repo}`);
-  // })
-
-  // octokit.repos.getForOrg({
-  //   org: 'octokit',
-  //   type: 'public'
-  // }).then(({ data, headers, status }) => {
-  //   console.log(data);
-  //   res.json(`profile route for ${username}`);
+      return res.json(profile);
+    });
+  // .then(results => {
+  //   console.log(results);
+  //   return res.json(profile);
   // })
 })
 
