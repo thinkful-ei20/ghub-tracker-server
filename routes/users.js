@@ -154,4 +154,13 @@ router.get('/profile', (req, res, next) => {
 
 })
 
+router.post('/addFriend', (req, res, next) => {
+  const userId = req.user.id;
+  const friendId = req.body.friendId;
+
+  User.requestFriend(userId, friendId, (results) => {
+    !(results instanceof Error) ? res.json('friend request sent') : next(results);
+  });
+})
+
 module.exports = router;
