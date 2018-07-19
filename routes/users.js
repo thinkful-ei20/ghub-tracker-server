@@ -125,27 +125,33 @@ router.use('/', passport.authenticate('jwt', { session: false, failWithError: tr
 
 router.get('/profile', (req, res, next) => {
   const username = req.user.username;
+  console.log('username: ', username);
 
   let profile = {
     repos: []
   };
+
   // get list of repos for username
   gitWrap.getUserRepos(username)
     .then(results => {
       _.each(results.data, function (repo) {
+        console.log('repo name: ', repo.name);
         profile.repos.push({ name: repo.name });
       });
 
+      return gitWrap.getUserRepoCommits(username, profile.repos[0].name);
+
+      // TODO: FIGURE OUT HOW TO RETURN FROM PROMISE.ALL WITH A DYNAMIC AMOUNT OF PROMISES*************
       // return Promise.all(profile.repos.map(repo => {
       //   gitWrap.getUserRepoCommits(username, repo.name);
       // }));
-
+    })
+    .then(data => {
+      console.log(data);
       return res.json(profile);
-    });
-  // .then(results => {
-  //   console.log(results);
-  //   return res.json(profile);
-  // })
+    })
+    .catch(next);
+
 })
 
 module.exports = router;
