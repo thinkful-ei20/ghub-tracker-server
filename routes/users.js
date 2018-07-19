@@ -154,6 +154,14 @@ router.get('/profile', (req, res, next) => {
 
 })
 
+router.get('/friends', (req, res, next) => {
+  const userId = req.user.id;
+
+  User.getFriends(userId, (err, friendships) => {
+    res.json(friendships);
+  })
+})
+
 router.post('/addFriend', (req, res, next) => {
   const userId = req.user.id;
   const friendId = req.body.friendId;
