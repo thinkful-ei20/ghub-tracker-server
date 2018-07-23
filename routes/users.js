@@ -173,7 +173,7 @@ router.post('/register', (req, res, next) => {
 //   })
 // })
 
-router.get('/:username', (req, res, next) => {
+router.get('/profile/:username', (req, res, next) => {
   const username = req.params.username;
 
   User.findOne({ username })
@@ -186,6 +186,15 @@ router.use('/', passport.authenticate('jwt', {
   session: false,
   failWithError: true
 }));
+
+router.get('/dashboard', (req, res, next) => {
+  const user = req.user
+
+  User.getFriends(user.id, (err, friends) => {
+    if (err) next(err)
+    res.json(friends)
+  })
+})
 
 router.get('/addFriend/:receivingUserId', (req, res, next) => {
   const sendingUser = req.user.id;
@@ -204,14 +213,5 @@ router.get('/acceptFriend/:sendingUserId', (req, res, next) => {
     !(results instanceof Error) ? res.json('friend request accepted'): next(results);
   });
 });
-
-router.get('/dashboard', (req, res, next) => {
-  const user = req.user;
-
-  User.getFriends(userId, (err, friendships) => {
-    if (err) next(err);
-    res.json({ ...user, friends: friendships });
-  });
-})
 
 module.exports = router;
