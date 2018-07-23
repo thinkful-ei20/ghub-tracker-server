@@ -181,7 +181,6 @@ router.get('/:username', (req, res, next) => {
     .catch(next);
 })
 
-
 // PROTECTION FOR THE FOLLOWING ENDPOINTS
 router.use('/', passport.authenticate('jwt', {
   session: false,
