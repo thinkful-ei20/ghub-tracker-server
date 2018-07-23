@@ -6,7 +6,7 @@ const octokit = require('@octokit/rest')({
 
 octokit.authenticate({
   type: 'token',
-  token: 'b9e8375f0955ad1c43dfb367592de7f5d9618877'
+  token: 'a71b80555f6227b9892e871ea630243e3b1f60da'
 })
 
 
