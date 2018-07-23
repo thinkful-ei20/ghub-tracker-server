@@ -136,10 +136,11 @@ router.get('/profile', (req, res, next) => {
     .then(results => {
       _.forEach(results.data, function (repo) {
         console.log('repo name: ', repo.name);
-        profile.repos.push({ name: repo.name });
+        profile.repos.push({
+          name: repo.name,
+          commits: Math.floor(Math.random() * 201)
+        });
       });
-
-      // return gitWrap.getUserRepoCommits(username, profile.repos[0].name);
 
       // TODO: FIGURE OUT HOW TO RETURN FROM PROMISE.ALL WITH A DYNAMIC AMOUNT OF PROMISES*************
       // return Promise.all(profile.repos.map(repo => {
@@ -148,12 +149,8 @@ router.get('/profile', (req, res, next) => {
 
       return res.json(profile);
     })
-  // .then(result => {
-  //   console.log(result);
-  //   return res.json(profile);
-  // })
-  // .catch(next);
-})
+    .catch(next);
+});
 
 router.get('/friends', (req, res, next) => {
   const userId = req.user.id;
