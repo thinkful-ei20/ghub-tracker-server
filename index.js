@@ -14,6 +14,7 @@ const { dbConnect, dbGet } = require('./db-mongoose');
 const localStrategy = require('./passport/local');
 const jwtStrategy = require('./passport/jwt');
 
+const leaderBoardRouter = require('./routes/leaderboard');
 const usersRouter = require('./routes/users');
 const authRouter = require('./routes/auth');
 
@@ -36,6 +37,7 @@ app.use(express.json());
 passport.use(localStrategy);
 passport.use(jwtStrategy);
 
+app.use('/api/leaderboard', leaderBoardRouter);
 app.use('/api/users', usersRouter);
 app.use('/api', authRouter);
 
