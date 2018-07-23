@@ -1,6 +1,10 @@
 'use strict';
 
 const express = require('express');
+const passport = require('passport');
+const _ = require('lodash');
+
+const gitWrap = require('../utility/git-wrap');
 
 const User = require('../models/user');
 
@@ -88,7 +92,8 @@ router.post('/register', (req, res, next) => {
 
   // Username and password were validated as pre-trimmed
   let { username, password, firstname = '', lastname = '' } = req.body;
-  let fullname = `${firstname.trim()} ${lastname.trim()}`;
+  firstname = firstname.trim();
+  lastname = lastname.trim();
 
   // Remove explicit hashPassword if using pre-save middleware
   User.hashPassword(password)
@@ -96,7 +101,8 @@ router.post('/register', (req, res, next) => {
       const newUser = {
         username,
         password: digest,
-        fullname
+        firstname,
+        lastname
       };
       return User.create(newUser);
     })
@@ -111,5 +117,68 @@ router.post('/register', (req, res, next) => {
       next(err);
     });
 });
+
+
+/* ==================================================================================== */
+// PROTECTION FOR THE FOLLOWING ENDPOINTS
+router.use('/', passport.authenticate('jwt', { session: false, failWithError: true }));
+
+router.get('/profile', (req, res, next) => {
+  const username = req.user.username;
+  console.log('username: ', username);
+
+  let profile = {
+    repos: []
+  };
+
+  // get list of repos for username
+  gitWrap.getUserRepos(username)
+    .then(results => {
+      _.forEach(results.data, function (repo) {
+        console.log('repo name: ', repo.name);
+        profile.repos.push({ name: repo.name });
+      });
+
+      // return gitWrap.getUserRepoCommits(username, profile.repos[0].name);
+
+      // TODO: FIGURE OUT HOW TO RETURN FROM PROMISE.ALL WITH A DYNAMIC AMOUNT OF PROMISES*************
+      // return Promise.all(profile.repos.map(repo => {
+      //   gitWrap.getUserRepoCommits(username, repo.name);
+      // }));
+
+      return res.json(profile);
+    })
+  // .then(result => {
+  //   console.log(result);
+  //   return res.json(profile);
+  // })
+  // .catch(next);
+})
+
+router.get('/friends', (req, res, next) => {
+  const userId = req.user.id;
+
+  User.getFriends(userId, (err, friendships) => {
+    res.json(friendships);
+  })
+})
+
+router.post('/addFriend', (req, res, next) => {
+  const userId = req.user.id;
+  const friendId = req.body.friendId;
+
+  User.requestFriend(userId, friendId, (results) => {
+    !(results instanceof Error) ? res.json('friend request sent') : next(results);
+  });
+})
+
+router.post('/acceptFriend', (req, res, next) => {
+  const userId = req.user.id;
+  const friendId = req.body.friendId;
+
+  User.requestFriend(userId, friendId, (results) => {
+    !(results instanceof Error) ? res.json('friend request accepted') : next(results);
+  });
+})
 
 module.exports = router;

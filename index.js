@@ -6,6 +6,7 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const passport = require('passport');
+const _ = require('lodash');
 
 const { PORT, CLIENT_ORIGIN } = require('./config');
 const { dbConnect, dbGet } = require('./db-mongoose');
