@@ -72,8 +72,13 @@ router.post('/register', (req, res, next) => {
   // bcrypt truncates after 72 characters, so let's not give the illusion
   // of security by storing extra **unused** info
   const sizedFields = {
-    username: { min: 1 },
-    password: { min: 8, max: 72 }
+    username: {
+      min: 1
+    },
+    password: {
+      min: 8,
+      max: 72
+    }
   };
 
   const tooSmallField = Object.keys(sizedFields).find(
@@ -100,7 +105,12 @@ router.post('/register', (req, res, next) => {
   }
 
   // Username and password were validated as pre-trimmed
-  let { username, password, firstname = '', lastname = '' } = req.body;
+  let {
+    username,
+    password,
+    firstname = '',
+    lastname = ''
+  } = req.body;
   firstname = firstname.trim();
   lastname = lastname.trim();
 
@@ -127,10 +137,46 @@ router.post('/register', (req, res, next) => {
     });
 });
 
+router.get('/profile/:username', (req, res, next) => {
+  const username = req.params.username;
 
-/* ==================================================================================== */
+  User.findOne({ username })
+    .then(user => res.json(user))
+    .catch(next);
+})
+
 // PROTECTION FOR THE FOLLOWING ENDPOINTS
-router.use('/', passport.authenticate('jwt', { session: false, failWithError: true }));
+router.use('/', passport.authenticate('jwt', {
+  session: false,
+  failWithError: true
+}));
+
+router.get('/dashboard', (req, res, next) => {
+  const user = req.user
+
+  User.getFriends(user.id, (err, friends) => {
+    if (err) next(err)
+    res.json(friends)
+  })
+})
+
+router.get('/addFriend/:receivingUserId', (req, res, next) => {
+  const sendingUser = req.user.id;
+  const receivingUser = req.params.receivingUserId;
+
+  User.requestFriend(sendingUser, receivingUser, (results) => {
+    !(results instanceof Error) ? res.json('friend request sent') : next(results);
+  });
+});
+
+router.get('/acceptFriend/:sendingUserId', (req, res, next) => {
+  const receivingUser = req.user.id;
+  const sendingUser = req.params.sendingUserId;
+
+  User.requestFriend(receivingUser, sendingUser, (results) => {
+    !(results instanceof Error) ? res.json('friend request accepted') : next(results);
+  });
+});
 
 router.get('/profile', (req, res, next) => {
   const username = req.user.username;
@@ -162,50 +208,6 @@ router.get('/profile', (req, res, next) => {
       console.log(promises);
       return res.json(profile);
     });
-  // gitWrap.getUserRepos(username)
-  //   .then(results => {
-  //     _.forEach(results.data, function (repo) {
-  //       console.log('repo name: ', repo.name);
-  //       profile.repos.push({
-  //         name: repo.name,
-  //         commits: Math.floor(Math.random() * 201)
-  //       });
-  //     });
-
-  //     // TODO: FIGURE OUT HOW TO RETURN FROM PROMISE.ALL WITH A DYNAMIC AMOUNT OF PROMISES*************
-  //     // return Promise.all(profile.repos.map(repo => {
-  //     //   gitWrap.getUserRepoCommits(username, repo.name);
-  //     // }));
-
-  //     return res.json(profile);
-  //   })
-  //   .catch(next);
 });
-
-router.get('/friends', (req, res, next) => {
-  const userId = req.user.id;
-
-  User.getFriends(userId, (err, friendships) => {
-    res.json(friendships);
-  })
-})
-
-router.post('/addFriend', (req, res, next) => {
-  const userId = req.user.id;
-  const friendId = req.body.friendId;
-
-  User.requestFriend(userId, friendId, (results) => {
-    !(results instanceof Error) ? res.json('friend request sent') : next(results);
-  });
-})
-
-router.post('/acceptFriend', (req, res, next) => {
-  const userId = req.user.id;
-  const friendId = req.body.friendId;
-
-  User.requestFriend(userId, friendId, (results) => {
-    !(results instanceof Error) ? res.json('friend request accepted') : next(results);
-  });
-})
 
 module.exports = router;
