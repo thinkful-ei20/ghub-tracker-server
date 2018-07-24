@@ -4,11 +4,20 @@ const express = require('express');
 const passport = require('passport');
 const _ = require('lodash');
 
-const gitWrap = require('../utility/git-wrap');
-
 const User = require('../models/user');
 
 const router = express.Router();
+
+const octokit = require('@octokit/rest')({
+  debug: true
+})
+
+// basic
+octokit.authenticate({
+  type: 'basic',
+  username: 'jeffmahmoudi@gmail.com',
+  password: 'Persican#1'
+})
 
 router.get('/', (req, res, next) => {
   User.find({})
@@ -125,31 +134,52 @@ router.use('/', passport.authenticate('jwt', { session: false, failWithError: tr
 
 router.get('/profile', (req, res, next) => {
   const username = req.user.username;
-  console.log('username: ', username);
 
   let profile = {
-    repos: []
+    repos: [],
   };
 
   // get list of repos for username
-  gitWrap.getUserRepos(username)
+  octokit.repos.getForUser({ username })
     .then(results => {
-      _.forEach(results.data, function (repo) {
-        console.log('repo name: ', repo.name);
+      // hydrate profile.repos
+      _.forEach(results.data, repo => {
         profile.repos.push({
           name: repo.name,
-          commits: Math.floor(Math.random() * 201)
+          // commits: Math.floor(Math.random() * 201), // TEMP
         });
       });
-
-      // TODO: FIGURE OUT HOW TO RETURN FROM PROMISE.ALL WITH A DYNAMIC AMOUNT OF PROMISES*************
-      // return Promise.all(profile.repos.map(repo => {
-      //   gitWrap.getUserRepoCommits(username, repo.name);
-      // }));
-
-      return res.json(profile);
+      return Promise.all(profile.repos.map(repo => {
+        return octokit.repos.getCommits({ owner: username, repo: repo.name })
+          .then(({ data }) => {
+            repo.commits = data.length;
+            // repo.data = data;
+            return repo;
+          });
+      }));
     })
-    .catch(next);
+    .then(promises => {
+      console.log(promises);
+      return res.json(profile);
+    });
+  // gitWrap.getUserRepos(username)
+  //   .then(results => {
+  //     _.forEach(results.data, function (repo) {
+  //       console.log('repo name: ', repo.name);
+  //       profile.repos.push({
+  //         name: repo.name,
+  //         commits: Math.floor(Math.random() * 201)
+  //       });
+  //     });
+
+  //     // TODO: FIGURE OUT HOW TO RETURN FROM PROMISE.ALL WITH A DYNAMIC AMOUNT OF PROMISES*************
+  //     // return Promise.all(profile.repos.map(repo => {
+  //     //   gitWrap.getUserRepoCommits(username, repo.name);
+  //     // }));
+
+  //     return res.json(profile);
+  //   })
+  //   .catch(next);
 });
 
 router.get('/friends', (req, res, next) => {
