@@ -19,6 +19,7 @@ octokit.authenticate({
   password: 'Persican#1'
 })
 
+/* ========== GET ALL USERS ========= */
 router.get('/', (req, res, next) => {
   User.find({})
     .sort('name')
@@ -137,6 +138,7 @@ router.post('/register', (req, res, next) => {
     });
 });
 
+/* ========== GET PUBLIC USER PROFILE ========= */
 router.get('/profile/:username', (req, res, next) => {
   const username = req.params.username;
 
@@ -181,6 +183,34 @@ router.get('/acceptFriend/:sendingUserId', (req, res, next) => {
 router.get('/profile', (req, res, next) => {
   const username = req.user.username;
 
+  let user;
+  User.findOne({ username })
+    .then(results => {
+      user = results.toObject();
+      return octokit.users.getForUser({ username })
+    })
+    .then(({ data }) => {
+      delete data.id;
+      delete data.created_at;
+      delete data.updated_at;
+      console.log("U", user);
+      console.log("D", data);
+      let profile = Object.assign(user, data);
+      console.log('PROFILE: ', profile);
+      res.json(profile);
+    })
+    .catch(next);
+
+  // octokit.users.getForUser({ username })
+  //   .then(({ data }) => {
+  //     return res.json(data);
+  //   })
+  //   .catch(next);
+});
+
+router.get('/repos', (req, res, next) => {
+  const username = req.user.username;
+
   let profile = {
     repos: [],
   };
@@ -208,6 +238,16 @@ router.get('/profile', (req, res, next) => {
       console.log(promises);
       return res.json(profile);
     });
+
+
+
+  // const username = req.user.username;
+
+  // octokit.repos.getForUser({ username })
+  //   .then(({ data }) => {
+  //     return res.json(data);
+  //   })
+  //   .catch(next);
 });
 
 module.exports = router;
