@@ -183,71 +183,107 @@ router.get('/acceptFriend/:sendingUserId', (req, res, next) => {
 router.get('/profile', (req, res, next) => {
   const username = req.user.username;
 
-  let user;
+  let profile;
   User.findOne({ username })
-    .then(results => {
-      user = results.toObject();
-      return octokit.users.getForUser({ username })
+    .then(user => {
+      // Convert mongoose model to plain object
+      profile = user.toObject();
+      return octokit.users.getForUser({ username: profile.username }) // HERE WE CAN CHECK IF GITHUB HANDLE IS PRESENT, OTHERWISE USERNAME IS USED
+        .then(({ data, headers, status }) => {
+          // !!MAKE SURE TO USE DATA FIRST SO MONGOOSE MODEL KEYS OVERWRITE!!
+          profile = { ...data, ...profile };
+          profile.repos = [];
+          // get list of repos for username
+          return octokit.repos.getForUser({ username })
+            .then(({ data, headers, status }) => {
+              // hydrate profile.repos
+              _.forEach(data, repo => {
+                profile.repos.push(repo);
+              });
+              // get commits foreach repo
+              return Promise.all(profile.repos.map(repo => {
+                return octokit.repos.getCommits({ owner: username, repo: repo.name })
+                  .then(({ data, headers, status }) => {
+                    repo.commits = data;
+                    return repo;
+                  });
+              }));
+            });
+        })
+        .then(repos => {
+          return profile;
+        })
     })
-    .then(({ data }) => {
-      delete data.id;
-      delete data.created_at;
-      delete data.updated_at;
-      console.log("U", user);
-      console.log("D", data);
-      let profile = Object.assign(user, data);
-      console.log('PROFILE: ', profile);
+    .then(profile => {
+      console.log('***** PROFILE: ', profile);
       res.json(profile);
     })
     .catch(next);
-
-  // octokit.users.getForUser({ username })
-  //   .then(({ data }) => {
-  //     return res.json(data);
-  //   })
-  //   .catch(next);
 });
 
-router.get('/repos', (req, res, next) => {
-  const username = req.user.username;
+// router.get('/profile', (req, res, next) => {
+//   const username = req.user.username;
 
-  let profile = {
-    repos: [],
-  };
+//   let user;
+//   let profile;
+//   User.findOne({ username })
+//     .then(results => {
+//       // Convert mongoose model to plain object
+//       user = results.toObject();
+//       return octokit.users.getForUser({ username })
+//     })
+//     .then(({ data, headers, status }) => {
+//       // !!MAKE SURE TO USE DATA AS TARGET SO MONGOOSE MODEL KEYS OVERWRITE!!
+//       profile = Object.assign(data, user);
+//       // console.log('PROFILE: ', profile);
 
-  // get list of repos for username
-  octokit.repos.getForUser({ username })
-    .then(results => {
-      // hydrate profile.repos
-      _.forEach(results.data, repo => {
-        profile.repos.push({
-          name: repo.name,
-          // commits: Math.floor(Math.random() * 201), // TEMP
-        });
-      });
-      return Promise.all(profile.repos.map(repo => {
-        return octokit.repos.getCommits({ owner: username, repo: repo.name })
-          .then(({ data }) => {
-            repo.commits = data.length;
-            // repo.data = data;
-            return repo;
-          });
-      }));
-    })
-    .then(promises => {
-      console.log(promises);
-      return res.json(profile);
-    });
+//       profile.repos = [];
+//       // get list of repos for username
+//       return octokit.repos.getForUser({ username })
+//         .then(({ data, headers, status }) => {
+//           // hydrate profile.repos
+//           _.forEach(data, repo => {
+//             profile.repos.push(repo);
+//           });
+//           return profile;
+//         });
+//     })
+//     .then(results => {
+//       console.log('resultssss: ', results);
+//       res.json(profile);
+//     });
+// });
 
+// router.get('/repos', (req, res, next) => {
+//   const username = req.user.username;
 
+//   let profile = {
+//     repos: [],
+//   };
 
-  // const username = req.user.username;
-
-  // octokit.repos.getForUser({ username })
-  //   .then(({ data }) => {
-  //     return res.json(data);
-  //   })
-  //   .catch(next);
-});
+//   // get list of repos for username
+//   octokit.repos.getForUser({ username })
+//     .then(results => {
+//       // hydrate profile.repos
+//       _.forEach(results.data, repo => {
+//         profile.repos.push({
+//           name: repo.name,
+//           // commits: Math.floor(Math.random() * 201), // TEMP
+//         });
+//       });
+//       return Promise.all(profile.repos.map(repo => {
+//         return octokit.repos.getCommits({ owner: username, repo: repo.name })
+//           .then(({ data }) => {
+//             repo.commits = data.length;
+//             // repo.data = data;
+//             return repo;
+//           });
+//       }));
+//     })
+//     .then(promises => {
+//       console.log(promises);
+//       return res.json(profile);
+//     });
+// });
 
 module.exports = router;
