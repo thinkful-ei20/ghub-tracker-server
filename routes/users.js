@@ -183,9 +183,11 @@ router.get('/acceptFriend/:sendingUserId', (req, res, next) => {
 router.get('/profile', (req, res, next) => {
   const username = req.user.username;
 
+  let u;
   let profile;
   User.findOne({ username })
     .then(user => {
+      u = user;
       // Convert mongoose model to plain object
       profile = user.toObject();
       return octokit.users.getForUser({ username: profile.username }) // HERE WE CAN CHECK IF GITHUB HANDLE IS PRESENT, OTHERWISE USERNAME IS USED
@@ -215,7 +217,17 @@ router.get('/profile', (req, res, next) => {
         })
     })
     .then(profile => {
-      console.log('***** PROFILE: ', profile);
+      profile.friends = [];
+      return new Promise(function (resolve, reject) {
+        User.getFriends(u.id, (err, friendships) => {
+          _.forEach(friendships, friend => {
+            profile.friends.push(friend);
+          });
+          resolve(profile);
+        });
+      })
+    })
+    .then(profile => {
       res.json(profile);
     })
     .catch(next);
