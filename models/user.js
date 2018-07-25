@@ -3,6 +3,7 @@
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 const friends = require('mongoose-friends');
+const requests = require('mongoose-requests')
 
 const userSchema = new mongoose.Schema({
   firstname: { type: String, default: '' },
@@ -12,6 +13,7 @@ const userSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 userSchema.plugin(friends());
+userSchema.plugin(requests, { propName: 'challenges', userModel: 'User' })
 
 userSchema.set('toObject', {
   transform: function (doc, ret) {
