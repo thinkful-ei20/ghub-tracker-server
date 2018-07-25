@@ -8,6 +8,6 @@ module.exports = {
   TEST_DATABASE_URL:
     process.env.TEST_DATABASE_URL ||
     'mongodb://@localhost:27017/ghub-tracker-test',
-  JWT_SECRET: process.env.JWT_SECRET,
+  JWT_SECRET: process.env.JWT_SECRET || 'testing-secret',
   JWT_EXPIRY: process.env.JWT_EXPIRY || '7d'
 };
