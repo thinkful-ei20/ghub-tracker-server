@@ -17,6 +17,7 @@ const jwtStrategy = require('./passport/jwt');
 const leaderBoardRouter = require('./routes/leaderboard');
 const usersRouter = require('./routes/users');
 const authRouter = require('./routes/auth');
+const challengeRouter = require('./routes/challenges')
 
 const app = express();
 
@@ -40,6 +41,7 @@ passport.use(jwtStrategy);
 app.use('/api/leaderboard', leaderBoardRouter);
 app.use('/api/users', usersRouter);
 app.use('/api', authRouter);
+app.use('/api/challenges', challengeRouter)
 
 app.get('/', (req, res) => {
   res.send(`Hello ${req.hostname}`);
