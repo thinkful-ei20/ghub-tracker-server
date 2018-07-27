@@ -6,11 +6,33 @@ const _ = require('lodash');
 
 const User = require('../models/user');
 
-const router = express.Router();
-
 const octokit = require('@octokit/rest')({
   debug: true
 })
+
+const mcache = require('memory-cache');
+
+const cache = (duration) => {
+  return (req, res, next) => {
+    let key = '__express__' + req.originalUrl || req.url
+    // attach authenticated username to key
+    if (req.user.username) key += req.user.username;
+    let cachedBody = mcache.get(key)
+    if (cachedBody) {
+      // make sure to set header for content-type since html is default here
+      res.set('Content-Type', 'application/json');
+      res.send(cachedBody)
+      return
+    } else {
+      res.sendResponse = res.send
+      res.send = (body) => {
+        mcache.put(key, body, duration * 1000);
+        res.sendResponse(body)
+      }
+      next()
+    }
+  }
+}
 
 // basic
 octokit.authenticate({
@@ -18,6 +40,8 @@ octokit.authenticate({
   username: 'jeffmahmoudi@gmail.com',
   password: 'Persican#1'
 })
+
+const router = express.Router();
 
 /* ========== GET ALL USERS ========= */
 router.get('/', (req, res, next) => {
@@ -180,14 +204,12 @@ router.get('/acceptFriend/:sendingUserId', (req, res, next) => {
   });
 });
 
-router.get('/profile', (req, res, next) => {
+router.get('/profile', cache(10), (req, res, next) => {
   const username = req.user.username;
 
-  let u;
   let profile;
   User.findOne({ username })
     .then(user => {
-      u = user;
       // Convert mongoose model to plain object
       profile = user.toObject();
       return octokit.users.getForUser({ username: profile.username }) // HERE WE CAN CHECK IF GITHUB HANDLE IS PRESENT, OTHERWISE USERNAME IS USED
@@ -219,7 +241,7 @@ router.get('/profile', (req, res, next) => {
     .then(profile => {
       profile.friends = [];
       return new Promise(function (resolve, reject) {
-        User.getFriends(u.id, (err, friendships) => {
+        User.getFriends(profile.id, (err, friendships) => {
           _.forEach(friendships, friend => {
             profile.friends.push(friend);
           });
@@ -232,70 +254,5 @@ router.get('/profile', (req, res, next) => {
     })
     .catch(next);
 });
-
-// router.get('/profile', (req, res, next) => {
-//   const username = req.user.username;
-
-//   let user;
-//   let profile;
-//   User.findOne({ username })
-//     .then(results => {
-//       // Convert mongoose model to plain object
-//       user = results.toObject();
-//       return octokit.users.getForUser({ username })
-//     })
-//     .then(({ data, headers, status }) => {
-//       // !!MAKE SURE TO USE DATA AS TARGET SO MONGOOSE MODEL KEYS OVERWRITE!!
-//       profile = Object.assign(data, user);
-//       // console.log('PROFILE: ', profile);
-
-//       profile.repos = [];
-//       // get list of repos for username
-//       return octokit.repos.getForUser({ username })
-//         .then(({ data, headers, status }) => {
-//           // hydrate profile.repos
-//           _.forEach(data, repo => {
-//             profile.repos.push(repo);
-//           });
-//           return profile;
-//         });
-//     })
-//     .then(results => {
-//       console.log('resultssss: ', results);
-//       res.json(profile);
-//     });
-// });
-
-// router.get('/repos', (req, res, next) => {
-//   const username = req.user.username;
-
-//   let profile = {
-//     repos: [],
-//   };
-
-//   // get list of repos for username
-//   octokit.repos.getForUser({ username })
-//     .then(results => {
-//       // hydrate profile.repos
-//       _.forEach(results.data, repo => {
-//         profile.repos.push({
-//           name: repo.name,
-//           // commits: Math.floor(Math.random() * 201), // TEMP
-//         });
-//       });
-//       return Promise.all(profile.repos.map(repo => {
-//         return octokit.repos.getCommits({ owner: username, repo: repo.name })
-//           .then(({ data }) => {
-//             repo.commits = data.length;
-//             // repo.data = data;
-//             return repo;
-//           });
-//       }));
-//     })
-//     .then(promises => {
-//       console.log(promises);
-//       return res.json(profile);
-//     });
-// });
 
 module.exports = router;
