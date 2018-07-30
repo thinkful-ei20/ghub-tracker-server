@@ -55,4 +55,14 @@ router.get('/deny/:sendingUserId', (req, res, next) => {
     .catch(next)
 })
 
+// Delete challenge from logged in user to receivingUser
+router.get('/delete/:receivingUserId', (req, res, next) => {
+  const receivingUserId = req.params.receivingUserId
+  const sendingUserId = req.user.id
+
+  User.deleteRequest(sendingUserId, receivingUserId)
+    .then(() => res.status(204).end())
+    .catch(next)
+})
+
 module.exports = router
