@@ -204,7 +204,8 @@ router.get('/acceptFriend/:sendingUserId', (req, res, next) => {
   });
 });
 
-router.get('/profile', cache(10), (req, res, next) => {
+// router.get('/profile', cache(10), (req, res, next) => {
+router.get('/profile', (req, res, next) => {
   const username = req.user.username;
 
   let profile;
