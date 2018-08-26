@@ -204,6 +204,19 @@ router.get('/acceptFriend/:sendingUserId', (req, res, next) => {
   });
 });
 
+
+router.get('/removeFriend/:receivingUserId', (req, res, next) => {
+
+  const sendingUser = req.user.id;
+  const receivingUser = req.params.receivingUserId;
+
+  User.removeFriend(sendingUser, receivingUser, (results) => {
+    !(results instanceof Error) ? res.json('Friendship removed') : next(results);
+  })
+      
+}) 
+
+
 // router.get('/profile', cache(10), (req, res, next) => {
 router.get('/profile', (req, res, next) => {
   const username = req.user.username;
