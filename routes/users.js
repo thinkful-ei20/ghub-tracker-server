@@ -171,6 +171,16 @@ router.get('/profile/:username', (req, res, next) => {
     .catch(next);
 })
 
+//TO GET THE USERNAME GiVEN USER ID
+router.get('/profilewithId/:userId', (req, res, next) => {
+  const _id = req.params.userId;
+  console.log('USERID',_id);
+
+  User.findOne({ _id })
+    .then(user => res.json(user))
+    .catch(next);
+})
+
 // PROTECTION FOR THE FOLLOWING ENDPOINTS
 router.use('/', passport.authenticate('jwt', {
   session: false,
